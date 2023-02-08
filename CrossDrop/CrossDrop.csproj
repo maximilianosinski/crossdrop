@@ -54,17 +54,11 @@
     </ItemGroup>
 
     <ItemGroup>
-      <MauiIcon Include="Resources\AppIcon\appicon.svg" Color="#FFFFFF" BaseSize="128,128" />
+      <MauiIcon Include="Resources\AppIcon\appicon.svg" Color="#FFFFFF" BaseSize="32, 32" />
       <MauiSplashScreen Include="Resources\Splash\splash.svg">
         <Color>#FFFFFF</Color>
         <BaseSize>128,128</BaseSize>
       </MauiSplashScreen>
-    </ItemGroup>
-
-    <ItemGroup>
-      <Folder Include="Resources\Fonts" />
-      <Folder Include="Resources\Images" />
-      <Folder Include="Resources\Styles" />
     </ItemGroup>
 
 </Project>

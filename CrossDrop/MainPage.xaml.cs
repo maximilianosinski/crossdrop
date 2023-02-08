@@ -38,7 +38,7 @@ public partial class MainPage
                         {
                             var listener = new Thread(Listener);
                             listener.Start();
-                            _connection = await Connection.FindConnectionAsync();
+                            _connection = await Connection.Initialize("192.168.0.51", 11000);
                             var ipAddress = _connection.GetIpAddress()!.ToString();
                             await _webView.EvaluateJavaScriptAsync(
                                 $"actionHandler.resultEvent('command:searchDevice', '{JsonConvert.SerializeObject(new { ipAddress })}')");
@@ -107,6 +107,11 @@ public partial class MainPage
                 else
                 {
                     await memoryStream.WriteAsync(buffer.AsMemory(0, bytesReceived));
+                    var progress = (memoryStream.ToArray().Length / completeSize ) * 100;
+                    MainThread.BeginInvokeOnMainThread(async () =>
+                    {
+                        await _webView.EvaluateJavaScriptAsync($"window.setProgress('{progress}')");
+                    });
                     if (completeSize != memoryStream.ToArray().Length) continue;
                     MainThread.BeginInvokeOnMainThread(async () =>
                     {
