@@ -15,7 +15,7 @@
         <ApplicationTitle>CrossDrop</ApplicationTitle>
 
         <!-- App Identifier -->
-        <ApplicationId>com.companyname.crossdrop</ApplicationId>
+        <ApplicationId>com.maxeman.crossdrop</ApplicationId>
         <ApplicationIdGuid>1D3B5A53-DCD5-41D7-8766-83C161B0CF6F</ApplicationIdGuid>
 
         <!-- Versions -->
@@ -30,6 +30,9 @@
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
     </PropertyGroup>
 
+    <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net7.0-ios|AnyCPU'">
+      <CreatePackage>false</CreatePackage>
+    </PropertyGroup>
     <ItemGroup>
         <!-- App Icon -->
 
@@ -47,6 +50,7 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="7.0.0" />
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.3-beta1" />
     </ItemGroup>
 
     <ItemGroup>
