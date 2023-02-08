@@ -10,15 +10,16 @@ public partial class MainPage
     private Connection _connection;
     private byte[] _currentFile;
     private string _currentFileName;
+    private WebView _webView;
 
     public MainPage()
     {
         InitializeComponent();
-        var webView = new WebView();
-        ContentPage.Content = webView;
-        webView.Reload();
-        webView.Source = "http://192.168.108.212:5173";
-        webView.Navigating += async (_, args) =>
+        _webView = new WebView();
+        ContentPage.Content = _webView;
+        _webView.Reload();
+        _webView.Source = "http://192.168.0.51:5173/";
+        _webView.Navigating += async (_, args) =>
         {
             if (args.Url.Contains("action."))
             {
@@ -37,9 +38,9 @@ public partial class MainPage
                         {
                             var listener = new Thread(Listener);
                             listener.Start();
-                            _connection = await Connection.Initialize("127.0.0.1", 11000);
+                            _connection = await Connection.FindConnectionAsync();
                             var ipAddress = _connection.GetIpAddress()!.ToString();
-                            await webView.EvaluateJavaScriptAsync(
+                            await _webView.EvaluateJavaScriptAsync(
                                 $"actionHandler.resultEvent('command:searchDevice', '{JsonConvert.SerializeObject(new { ipAddress })}')");
                         }
                         
@@ -53,7 +54,7 @@ public partial class MainPage
                                 await stream.CopyToAsync(memoryStream);
                                 _currentFile = memoryStream.ToArray();
                                 _currentFileName = result.FileName;
-                                await webView.EvaluateJavaScriptAsync(
+                                await _webView.EvaluateJavaScriptAsync(
                                     $"actionHandler.resultEvent('command:selectFile', '{JsonConvert.SerializeObject(new { name = result.FileName })}')");
                             }
                         }
@@ -64,7 +65,7 @@ public partial class MainPage
                             await _connection.SendFile(_currentFileName, _currentFile);
                             _currentFile = null;
                             _currentFileName = null;
-                            await webView.EvaluateJavaScriptAsync($"actionHandler.resultEvent('command:sendFile', '{JsonConvert.SerializeObject(new { success = true })}')");
+                            await _webView.EvaluateJavaScriptAsync($"actionHandler.resultEvent('command:sendFile', '{JsonConvert.SerializeObject(new { success = true })}')");
                         }
                     }
                 }
@@ -98,11 +99,20 @@ public partial class MainPage
                     var messageArray = message.Split(':');
                     completeSize = Convert.ToInt64(messageArray[1]);
                     fileName = messageArray[2];
+                    MainThread.BeginInvokeOnMainThread(async () =>
+                    {
+                        await _webView.EvaluateJavaScriptAsync($"window.setCurrentFileName('{fileName}')");
+                    });
                 }
                 else
                 {
                     await memoryStream.WriteAsync(buffer.AsMemory(0, bytesReceived));
                     if (completeSize != memoryStream.ToArray().Length) continue;
+                    MainThread.BeginInvokeOnMainThread(async () =>
+                    {
+                        await _webView.EvaluateJavaScriptAsync($"window.setProgress('{-1}')");
+                        await _webView.EvaluateJavaScriptAsync("window.setCurrentFileName('')");
+                    });
                     var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), fileName);
                     await File.WriteAllBytesAsync(
                         path,

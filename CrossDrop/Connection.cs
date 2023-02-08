@@ -51,6 +51,8 @@ public class Connection
                     pos = 1;
                 }
                 pos++;
+                var search = $"{router}{pos}";
+                if(search == GetLocalIp()) continue;
                 return await Initialize($"{router}{pos}", 11000, 2000);
             }
             catch
