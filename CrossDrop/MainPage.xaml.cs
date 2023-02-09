@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using CommunityToolkit.Maui.Storage;
 using Newtonsoft.Json;
 
 namespace CrossDrop;
@@ -16,9 +17,10 @@ public partial class MainPage
     {
         InitializeComponent();
         _webView = new WebView();
+       
         ContentPage.Content = _webView;
+        _webView.Source = "http://192.168.108.212:5173";
         _webView.Reload();
-        _webView.Source = "http://192.168.0.51:5173/";
         _webView.Navigating += async (_, args) =>
         {
             if (args.Url.Contains("action."))
@@ -38,7 +40,7 @@ public partial class MainPage
                         {
                             var listener = new Thread(Listener);
                             listener.Start();
-                            _connection = await Connection.Initialize("192.168.0.51", 11000);
+                            _connection = await Connection.Initialize("127.0.0.1", 11000, int.MaxValue);
                             var ipAddress = _connection.GetIpAddress()!.ToString();
                             await _webView.EvaluateJavaScriptAsync(
                                 $"actionHandler.resultEvent('command:searchDevice', '{JsonConvert.SerializeObject(new { ipAddress })}')");
@@ -115,13 +117,22 @@ public partial class MainPage
                     if (completeSize != memoryStream.ToArray().Length) continue;
                     MainThread.BeginInvokeOnMainThread(async () =>
                     {
-                        await _webView.EvaluateJavaScriptAsync($"window.setProgress('{-1}')");
+                        await _webView.EvaluateJavaScriptAsync("window.setProgress('-1')");
                         await _webView.EvaluateJavaScriptAsync("window.setCurrentFileName('')");
                     });
-                    var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), fileName);
-                    await File.WriteAllBytesAsync(
-                        path,
-                        memoryStream.ToArray());
+                    var mem = new MemoryStream(memoryStream.ToArray());
+                    var endName = fileName;
+                    MainThread.BeginInvokeOnMainThread(async () =>
+                    {
+                        try
+                        {
+                            await FileSaver.Default.SaveAsync(endName, mem, CancellationToken.None);
+                        }
+                        catch (Exception ex)
+                        {
+                            await DisplayAlert("Error", $"File is not saved, {ex.Message}", "Cancel.");
+                        }
+                    });
                     completeSize = 0;
                     fileName = string.Empty;
                     memoryStream.Close();
