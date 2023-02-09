@@ -25,6 +25,8 @@ public partial class App
         window.MaximumWidth = width;
         window.MaximumHeight = height;
 
+        window.Title = "CrossDrop";
+
         return window;
     }
 }

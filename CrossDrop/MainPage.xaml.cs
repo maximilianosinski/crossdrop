@@ -19,7 +19,7 @@ public partial class MainPage
         _webView = new WebView();
        
         ContentPage.Content = _webView;
-        _webView.Source = "http://192.168.108.212:5173";
+        _webView.Source = " http://192.168.0.51:5173/";
         _webView.Reload();
         _webView.Navigating += async (_, args) =>
         {
@@ -101,7 +101,7 @@ public partial class MainPage
                     var messageArray = message.Split(':');
                     completeSize = Convert.ToInt64(messageArray[1]);
                     fileName = messageArray[2];
-                    MainThread.BeginInvokeOnMainThread(async () =>
+                    await MainThread.InvokeOnMainThreadAsync(async () =>
                     {
                         await _webView.EvaluateJavaScriptAsync($"window.setCurrentFileName('{fileName}')");
                     });
@@ -110,19 +110,19 @@ public partial class MainPage
                 {
                     await memoryStream.WriteAsync(buffer.AsMemory(0, bytesReceived));
                     var progress = (memoryStream.ToArray().Length / completeSize ) * 100;
-                    MainThread.BeginInvokeOnMainThread(async () =>
+                    await MainThread.InvokeOnMainThreadAsync(async () =>
                     {
                         await _webView.EvaluateJavaScriptAsync($"window.setProgress('{progress}')");
                     });
                     if (completeSize != memoryStream.ToArray().Length) continue;
-                    MainThread.BeginInvokeOnMainThread(async () =>
+                    await MainThread.InvokeOnMainThreadAsync(async () =>
                     {
                         await _webView.EvaluateJavaScriptAsync("window.setProgress('-1')");
                         await _webView.EvaluateJavaScriptAsync("window.setCurrentFileName('')");
                     });
                     var mem = new MemoryStream(memoryStream.ToArray());
                     var endName = fileName;
-                    MainThread.BeginInvokeOnMainThread(async () =>
+                    await MainThread.InvokeOnMainThreadAsync(async () =>
                     {
                         try
                         {
@@ -130,7 +130,7 @@ public partial class MainPage
                         }
                         catch (Exception ex)
                         {
-                            await DisplayAlert("Error", $"File is not saved, {ex.Message}", "Cancel.");
+                            await DisplayAlert("Error", $"Failed to save file, {ex.Message}", "Cancel.");
                         }
                     });
                     completeSize = 0;
