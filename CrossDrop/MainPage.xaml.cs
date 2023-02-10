@@ -12,6 +12,7 @@ public partial class MainPage
     private byte[] _currentFile;
     private string _currentFileName;
     private WebView _webView;
+    private CancellationTokenSource _autoConnectCancellationTokenSource;
 
     public MainPage()
     {
@@ -19,7 +20,7 @@ public partial class MainPage
         _webView = new WebView();
        
         ContentPage.Content = _webView;
-        _webView.Source = " http://192.168.0.51:5173/";
+        _webView.Source = "http://192.168.108.212:5173/";
         _webView.Reload();
         _webView.Navigating += async (_, args) =>
         {
@@ -27,7 +28,7 @@ public partial class MainPage
             {
                 args.Cancel = true;
                 var command = args.Url.Replace("action.", "");
-                var parts = command.Split(":", 3);
+                var parts = command.Split(":");
                 var action = parts[0];
                 var type = parts[1];
                 var identifier = parts[2];
@@ -40,7 +41,10 @@ public partial class MainPage
                         {
                             var listener = new Thread(Listener);
                             listener.Start();
-                            _connection = await Connection.Initialize("127.0.0.1", 11000, int.MaxValue);
+                            _autoConnectCancellationTokenSource = new CancellationTokenSource();
+                            var ct = _autoConnectCancellationTokenSource.Token;
+                            _connection = await Connection.FindConnectionAsync(ct);
+                            if (_connection == null) return;
                             var ipAddress = _connection.GetIpAddress()!.ToString();
                             await _webView.EvaluateJavaScriptAsync(
                                 $"actionHandler.resultEvent('command:searchDevice', '{JsonConvert.SerializeObject(new { ipAddress })}')");
@@ -68,6 +72,21 @@ public partial class MainPage
                             _currentFile = null;
                             _currentFileName = null;
                             await _webView.EvaluateJavaScriptAsync($"actionHandler.resultEvent('command:sendFile', '{JsonConvert.SerializeObject(new { success = true })}')");
+                        }
+
+                        if (identifier == "customConnect")
+                        {
+                            var ip = parts[3];
+                            if (_autoConnectCancellationTokenSource.IsCancellationRequested)
+                            {
+                                _autoConnectCancellationTokenSource.Cancel();
+                            }
+
+                            _connection = await Connection.Initialize(ip, 11000);
+                            if (_connection == null) return;
+                            var ipAddress = _connection.GetIpAddress()!.ToString();
+                            await _webView.EvaluateJavaScriptAsync(
+                                $"actionHandler.resultEvent('command:searchDevice', '{JsonConvert.SerializeObject(new { ipAddress })}')");
                         }
                     }
                 }

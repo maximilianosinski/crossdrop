@@ -19,18 +19,24 @@ public class Connection
         Port = port;
     }
 
-    public static async Task<Connection> Initialize(string ipAddress, int port, int timeout = 60000)
+    public static async Task<Connection> Initialize(string ipAddress, int port)
     {
-        var task = Ini(ipAddress, port);
-        if (await Task.WhenAny(task, Task.Delay(timeout)) == task)
-        {
-            return task.Result;
-        }
 
-        throw new TimeoutException("Connection timeout.");
+        while (true)
+        {
+            var client = new TcpClient();
+            try
+            {
+                await client.ConnectAsync(IPAddress.Parse(ipAddress), port);
+            }
+            catch
+            {
+                // ignored
+            }
+        }
     }
 
-    public static async Task<Connection> FindConnectionAsync()
+    public static async Task<Connection> FindConnectionAsync(CancellationToken cancellationToken)
     {
         var ip = GetLocalIp();
         if (ip == null)
@@ -40,12 +46,16 @@ public class Connection
 
         var index = ip.LastIndexOf(".", StringComparison.Ordinal);
         var router = ip[..(index + 1)];
-        var pos = 49;
+        var pos = 2;
 
         while (true)
         {
             try
             {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return null;
+                }
                 if (pos >= 254)
                 {
                     pos = 1;
@@ -53,7 +63,15 @@ public class Connection
                 pos++;
                 var search = $"{router}{pos}";
                 if(search == GetLocalIp()) continue;
-                return await Initialize($"{router}{pos}", 11000, 2000);
+                var client = new TcpClient();
+                try
+                {
+                    await client.ConnectAsync(IPAddress.Parse(search), 11000);
+                }
+                catch
+                {
+                    // ignored
+                }
             }
             catch
             {
@@ -68,25 +86,6 @@ public class Connection
         return (from ip in host.AddressList where ip.AddressFamily == AddressFamily.InterNetwork select ip.ToString()).FirstOrDefault();
     }
 
-    private static async Task<Connection> Ini(string ipAddress, int port)
-    {
-        var client = new TcpClient();
-        while (true)
-        {
-            try
-            {
-                await client.ConnectAsync(IPAddress.Parse(ipAddress), port);
-                break;
-            }
-            catch
-            {
-                // ignored
-            }
-        }
-
-        return new Connection(client, client.GetStream(), ipAddress, port);
-    }
-    
     public async Task SendFile(string filename, byte[] data)
     {
         var message = $"FILE:{data.Length}:{filename}";
